@@ -11,19 +11,22 @@ export class Three {
   private mouse: THREE.Vector2;
   private domElement: HTMLElement
   private stats: Stats
-  private clickedObject: THREE.Object3D | null = null;
+  private loadedObject?: THREE.Scene | THREE.Mesh | THREE.Group
+  // private clickedObject: THREE.Object3D | null = null;
 
   // const three = new Three('#yourContainer'); // 替换成您的容器选择器或 DOM 元素
+  // 构造函数
   constructor(container: string | HTMLElement) {
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    this.renderer = new THREE.WebGLRenderer();
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); // 增加抗锯齿 提升画质
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
     this.domElement = typeof container === 'string' ? document.querySelector(container)! : container;
     this.initScene();
     this.initLight();
     this.initControls();
+    this.loadModel('/models/SheenChair.glb')
 
     this.renderer.setSize(this.domElement.clientWidth, this.domElement.clientHeight);
 
@@ -41,6 +44,8 @@ export class Three {
     const geometry = new THREE.BoxGeometry( 1, 1, 1 );
     const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
     const cube = new THREE.Mesh( geometry, material );
+    cube.name = 'cube_mock'
+    cube.position.x = -1
     this.scene.add( cube );
 
     // 设置相机初始位置
@@ -48,9 +53,11 @@ export class Three {
 
   }
 
+  // 初始化场景
   private initScene() {
     this.scene.background = new THREE.Color(0xf0f0f0);
   }
+  // 初始化灯光
   private initLight() {
     const ambientLight = new THREE.AmbientLight(0x404040);
     this.scene.add(ambientLight);
@@ -78,6 +85,7 @@ export class Three {
     this.renderer.setSize(newWidth, newHeight);
   }
 
+  // 渲染loop
   private animate() {
     requestAnimationFrame(() => this.animate());
     this.renderer.render(this.scene, this.camera);
@@ -85,10 +93,7 @@ export class Three {
     this.stats.update();
   }
 
-  // app.initMouseInteraction((object) => {
-  //   // 在这里进行下一步的交互处理，使用传递的交互的对象
-  //   console.log('Clicked on:', object);
-  // });
+  // 通过激光实现鼠标交互
   public initMouseInteraction(onObjectClick: (object: THREE.Object3D) => void) {
     window.addEventListener('mousemove', (event) => {
       const rect = this.domElement.getBoundingClientRect();
@@ -96,42 +101,39 @@ export class Three {
       this.mouse.y = -((event.clientY - rect.top) / this.domElement.clientHeight) * 2 + 1;
     });
 
+    // 公共监听鼠标点击事件
     window.addEventListener('click', () => {
       this.raycaster.setFromCamera(this.mouse, this.camera);
       const intersects = this.raycaster.intersectObjects(this.scene.children, true);
 
       if (intersects.length > 0) {
         const object = intersects[0].object;
-        // this.clickedObject = object; // 保存交互的对象
-        onObjectClick(object); // 调用回调函数传递交互的对象
+        if (object instanceof THREE.Mesh) {
+          object.material.color = new THREE.Color(Math.random(), Math.random(), Math.random());
+          // this.clickedObject = object; // 保存交互的对象
+          onObjectClick(object); // 调用回调函数传递交互的对象
+        }
       }
     });
   }
-
-  // three.initModel(
-  //   'https://example.com/path/to/your/model.gltf', // 替换成实际的模型 URL
-  //   (progress) => {
-  //     // 提取加载进度信息并处理
-  //     if (progress.lengthComputable) {
-  //       const percentComplete = (progress.loaded / progress.total) * 100;
-  //       console.log('Loading progress:', percentComplete.toFixed(2) + '%');
-  //     } else {
-  //       console.log('Loading progress:', 'unknown');
-  //     }
-  //   },
-  //   () => {
-  //     // 加载完成回调，您可以在这里执行一些操作
-  //     console.log('Model loaded.');
-  //   }
-  // );
-  public initModel(url: string, onProgress: (progress: ProgressEvent<EventTarget>) => void, onComplete: () => void) {
+  
+  // 加载模型方法
+  public loadModel(url: string, onProgress?: (progress: ProgressEvent<EventTarget>) => void, onComplete?: () => void) {
     const loader = new GLTFLoader();
     loader.load(
       url,
       (gltf) => {
-        gltf.scene.scale.setScalar(0.1);
+        // 删除已加载好的模型
+        if (this.loadedObject) {
+          this.removeObjectByNameOrObject('cube_mock')
+          this.removeObjectByNameOrObject(this.loadedObject)
+        }
+        gltf.scene.scale.setScalar(1);
         this.scene.add(gltf.scene);
-        onComplete();
+        this.loadedObject = gltf.scene
+        if (onComplete) {
+          onComplete();
+        }
       },
       onProgress,
       (error) => {
@@ -139,7 +141,22 @@ export class Three {
       }
     );
   }
+  // 删除一个物体
+  private removeObjectByNameOrObject(target: string | THREE.Mesh | THREE.Scene | THREE.Group) {
+    let objectToRemove = null;
 
+    if (typeof target === 'string') {
+      objectToRemove = this.scene.getObjectByName(target);
+    } else if (target instanceof THREE.Object3D) {
+      objectToRemove = target;
+    }
+
+    if (objectToRemove) {
+      this.scene.remove(objectToRemove);
+    }
+  }
+
+  // 销毁时需要做的事
   public destroy() {
     window.removeEventListener('resize', this.onWindowResize.bind(this), false);
   }
