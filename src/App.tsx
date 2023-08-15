@@ -42,6 +42,7 @@ function App() {
 
   return (
     <div className="container">
+      <button onClick={() => window.location.reload()}>重置刷新</button>
       <h1>Welcome to Threejs.</h1>
 
       <p>点击上传模型文件.</p>
