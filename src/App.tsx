@@ -1,16 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/tauri";
 import "./App.css";
+import { Three } from './lib/three'
 
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
   const [name, setName] = useState("");
-
+  let threeApp: Three
   async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
     setGreetMsg(await invoke("greet", { name }));
   }
+  useEffect(() => {
+    if (!threeApp) {
+      threeApp = new Three('#threeApp')
+      threeApp.initMouseInteraction((object) => {
+        // 在这里进行下一步的交互处理，使用传递的交互的对象
+        console.log('Clicked on:', object);
+      });
+    }
+  })
 
   return (
     <div className="container">
@@ -46,6 +55,7 @@ function App() {
       </form>
 
       <p>{greetMsg}</p>
+      <div id="threeApp" />
     </div>
   );
 }
