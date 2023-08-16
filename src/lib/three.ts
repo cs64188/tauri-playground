@@ -12,6 +12,9 @@ export class Three {
   private domElement: HTMLElement
   private stats: Stats
   private loadedObject?: THREE.Scene | THREE.Mesh | THREE.Group
+  private isModelRotating: boolean
+  private controls: OrbitControls // 鼠标镜头控制器
+  private rotationSpeed: number // 物体旋转速度
   // private clickedObject: THREE.Object3D | null = null;
 
   // const three = new Three('#yourContainer'); // 替换成您的容器选择器或 DOM 元素
@@ -23,9 +26,16 @@ export class Three {
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
     this.domElement = typeof container === 'string' ? document.querySelector(container)! : container;
+    this.isModelRotating = true; // 控制模型旋转状态
+    this.rotationSpeed = 0.005; // 初始旋转速度
+
+    // 鼠标控制器
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.target.set(0, 0, 0);
+    this.controls.update();
+
     this.initScene();
     this.initLight();
-    this.initControls();
     this.loadModel('/models/SheenChair.glb')
 
     this.renderer.setSize(this.domElement.clientWidth, this.domElement.clientHeight);
@@ -67,13 +77,6 @@ export class Three {
     this.scene.add(directionalLight);
   }
 
-  // 鼠标控制
-  private initControls() {
-    const controls = new OrbitControls(this.camera, this.renderer.domElement);
-    controls.target.set(0, 0, 0);
-    controls.update();
-  }
-
   // 窗口发生变化时重绘
   private onWindowResize() {
     const newWidth = this.domElement.clientWidth;
@@ -85,16 +88,17 @@ export class Three {
     this.renderer.setSize(newWidth, newHeight);
   }
 
-  // 渲染loop
-  private animate() {
-    requestAnimationFrame(() => this.animate());
-    this.renderer.render(this.scene, this.camera);
-    // 更新FPS监视器
-    this.stats.update();
-  }
-
   // 通过激光实现鼠标交互
   public initMouseInteraction(onObjectClick: (object: THREE.Object3D) => void) {
+    // 监听 OrbitControls 的鼠标事件
+    this.controls.addEventListener('start', () => {
+      this.isModelRotating = false; // 鼠标按下时暂停模型旋转
+    });
+
+    this.controls.addEventListener('end', () => {
+      this.isModelRotating = true; // 鼠标释放后继续模型旋转
+    });
+    // 出表移动时记录鼠标点
     window.addEventListener('mousemove', (event) => {
       const rect = this.domElement.getBoundingClientRect();
       this.mouse.x = ((event.clientX - rect.left) / this.domElement.clientWidth) * 2 - 1;
@@ -154,6 +158,24 @@ export class Three {
     if (objectToRemove) {
       this.scene.remove(objectToRemove);
     }
+  }
+
+  // !important!!! 渲染loop
+  private animate() {
+    requestAnimationFrame(() => this.animate());
+
+    // 宣传服务
+    if (this.isModelRotating) {
+      // 遍历所有加载的模型，应用旋转
+      if (this.loadedObject) {
+        // 使用 自定义的 easeInOutCubic 函数实现先快后慢的缓动效果
+        this.loadedObject.rotation.y += this.rotationSpeed;
+      }
+    }
+
+    this.renderer.render(this.scene, this.camera);
+    // 更新FPS监视器
+    this.stats.update();
   }
 
   // 销毁时需要做的事
