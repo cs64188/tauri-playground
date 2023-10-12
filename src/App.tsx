@@ -50,6 +50,7 @@ function App() {
       <form className="row">
         <input onChange={(e) => handleFileInputChange(e)} placeholder="Enter a name..." type="file" />
       </form>
+      <button onClick={() => threeApp.moveCameraTo({ x: 0, y: 10, z: 20 })}>飞镜头</button>
 
       <div id="threeApp" />
     </div>
