@@ -13,6 +13,7 @@ export class Three {
   private domElement: HTMLElement
   private stats: Stats
   private loadedObject?: THREE.Scene | THREE.Mesh | THREE.Group
+  private controls: OrbitControls
   // private clickedObject: THREE.Object3D | null = null;
 
   // const three = new Three('#yourContainer'); // 替换成您的容器选择器或 DOM 元素
@@ -24,6 +25,7 @@ export class Three {
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
     this.domElement = typeof container === 'string' ? document.querySelector(container)! : container;
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.initScene();
     this.initLight();
     this.initControls();
@@ -70,9 +72,9 @@ export class Three {
 
   // 鼠标控制
   private initControls() {
-    const controls = new OrbitControls(this.camera, this.renderer.domElement);
-    controls.target.set(0, 0, 0);
-    controls.update();
+    
+    this.controls.target.set(0, 0, 0);
+    this.controls.update();
   }
 
   // 窗口发生变化时重绘
@@ -159,12 +161,12 @@ export class Three {
 
   // 镜头平滑飞行
   public moveCameraTo(position: { x: number, y: number, z: number }) {
-    console.log(position, gsap)
+    // console.log(position, gsap)
     gsap.to(this.camera.position, {
       duration: 1, // 过渡动画的持续时间（秒）
-      x: position.x,
-      y: position.y,
-      z: position.z,
+      x: position.x * 0.01,
+      y: position.y * 0.01,
+      z: position.z * 0.01,
       ease: 'power2.inOut', // 缓动函数，根据需要更改
       onUpdate: () => {
         // 在动画更新时，渲染Three.js场景
@@ -173,23 +175,12 @@ export class Three {
       onComplete: () => {
         // 动画完成后执行的操作
         console.log("Camera animation completed.");
+        // this.controls.target.set(position.x, position.y, position.z)
       },
-    });
-    // gsap.to(this.camera.lookAt, {
-    //   duration: 1, // 过渡动画的持续时间（秒）
-    //   x: position.x,
-    //   y: position.y,
-    //   z: position.z,
-    //   ease: 'power2.inOut', // 缓动函数，根据需要更改
-    //   onUpdate: () => {
-    //     // 在动画更新时，渲染Three.js场景
-    //     // this.renderer.render(this.scene, this.camera);
-    //   },
-    //   onComplete: () => {
-    //     // 动画完成后执行的操作
-    //     console.log("Camera animation completed.");
-    //   },
-    // });
+    })
+    // this.camera.lookAt(position.x, position.y, position.z)
+    // this.controls.target = new THREE.Vector3(position.x, position.y, position.z)
+    // 还一个方案是移动物体，移动camera成本会比较大，todo...
   }
 
   // 销毁时需要做的事
