@@ -112,7 +112,10 @@ export class Three {
       if (intersects.length > 0) {
         const object = intersects[0].object;
         if (object instanceof THREE.Mesh) {
-          object.material.color = new THREE.Color(Math.random(), Math.random(), Math.random());
+          // object.material.color = new THREE.Color(Math.random(), Math.random(), Math.random());
+          // 测试点击后让材质变透明
+          const transparentMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.1 });
+          object.material = transparentMaterial
           // this.clickedObject = object; // 保存交互的对象
           onObjectClick(object); // 调用回调函数传递交互的对象
         }
